@@ -1,13 +1,19 @@
 package com.mlmakanakhon
 
-import com.mlmakanakhon.titanic.StartApp
+import com.mlmakanakhon.titanic.TitanicApplication
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 object RunApp {
 
   def main(args: Array[String]): Unit = {
-    StartApp.main(args)
+    val sparkSession = localSpark()
+
+    val titanicApplication = TitanicApplication(sparkSession)
+
+    titanicApplication.run()
+
+    sparkSession.close()
   }
 
   def localSpark() : SparkSession = {
