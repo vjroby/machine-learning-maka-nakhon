@@ -1,19 +1,14 @@
 package com.mlmakanakhon.titanic
 
-import com.mlmakanakhon.RunApp
 import com.mlmakanakhon.titanic.data.{ApplyLogisticRegression, RawDataReader}
-import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.ml.classification.LogisticRegression
-import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
+import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{StructField, _}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
-class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: ApplyLogisticRegression) extends LazyLogging {
+class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: ApplyLogisticRegression){
 
   def run(): Unit = {
-    logger.info("Starting the Titanic Application")
 
     val sqlContext = sparkSession.sqlContext
 
@@ -21,7 +16,29 @@ class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: Ap
 
     val csvDF = rawDataReader.data()
 
-    val csvRdd: RDD[Row] = csvDF.select("PassengerId", "Cabin").rdd.map(row => {
+    val csvRdd: RDD[Row] = transformCabin(csvDF)
+
+    val schema = getSchema
+    val cabinDF = sparkSession.createDataFrame(csvRdd, schema)
+
+    cabinDF.show()
+    val withCabinsDF: DataFrame = csvDF.join(cabinDF, Seq("PassengerId"))
+    val predictions = applyLogisticRegression.prediction(withCabinsDF)
+
+    // create an Evaluator for binary classification, which expects two input columns: rawPrediction and label.**
+    val evaluator = new BinaryClassificationEvaluator().setLabelCol("label")
+      .setRawPredictionCol("prediction")
+      .setMetricName("areaUnderROC")
+
+    val accuracy = evaluator.evaluate(predictions)
+
+    println("Accuracy: " + accuracy)
+
+    predictions.show()
+  }
+
+  private def transformCabin(csvDF: DataFrame) = {
+    csvDF.select("PassengerId", "Cabin").rdd.map(row => {
       val cabinChar = row.getAs[String]("Cabin") match {
         case null => (row.getAs[Long]("PassengerId"), "X", "-1", 0)
         case cabin: String => {
@@ -35,22 +52,16 @@ class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: Ap
       Row(cabinChar._1, cabinChar._2, cabinChar._3, cabinChar._4)
     }
     )
+  }
 
-    val schema = StructType(Array(
+  private def getSchema = {
+    StructType(Array(
       StructField("PassengerId", LongType, true),
       StructField("Char", StringType, true),
       StructField("CharRest", StringType, true),
       StructField("Cabins", IntegerType, true)
     ))
-    val cabinDF = sparkSession.createDataFrame(csvRdd, schema)
-
-    cabinDF.show()
-    val withCabinsDF: DataFrame = csvDF.join(cabinDF, Seq("PassengerId"))
-    val predictions = applyLogisticRegression.prediction(withCabinsDF)
-
-    predictions.show()
   }
-
 }
 
 object TitanicApplication {
@@ -62,6 +73,6 @@ object TitanicApplication {
   }
 }
 
-case class RawTitanic(PassengerId: Long, Survived: Integer, Pclass: Int, Name: String, Sex: String, Age: Int, SibSp: Integer,
-                      Parch: Integer, Ticket: String, Fare: Double, Cabin: String, Embarked: String)
+//case class RawTitanic(PassengerId: Long, Survived: Integer, Pclass: Int, Name: String, Sex: String, Age: Int, SibSp: Integer,
+//                      Parch: Integer, Ticket: String, Fare: Double, Cabin: String, Embarked: String)
 

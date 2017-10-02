@@ -7,13 +7,16 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 class RawDataReader(sparkSession: SparkSession) {
   def data(): DataFrame = {
-    val resource = this.getClass.getResource("/titanic.csv")
-
-    sparkSession.read
-      .format("csv")
-      .option("header", "true")
-      .schema(customSchema())
-      .load(resource.getPath)
+    this.getClass.getResource("/titanic.csv") match {
+      case null => throw new Exception("File not found: resources/titanic.csv")
+      case resource => {
+        sparkSession.read
+          .format("csv")
+          .option("header", "true")
+          .schema(customSchema())
+          .load(resource.getPath)
+      }
+    }
   }
   def customSchema(): StructType = {
     StructType(Array(
