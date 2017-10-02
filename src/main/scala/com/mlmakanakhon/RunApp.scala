@@ -11,7 +11,7 @@ object RunApp {
 
     val titanicApplication = TitanicApplication(sparkSession)
 
-    titanicApplication.run()
+    titanicApplication.run(args)
 
     sparkSession.close()
   }

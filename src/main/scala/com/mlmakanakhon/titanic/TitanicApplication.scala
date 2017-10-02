@@ -1,20 +1,28 @@
 package com.mlmakanakhon.titanic
 
+import java.io
+import java.net.URL
+
 import com.mlmakanakhon.titanic.data.{ApplyLogisticRegression, RawDataReader}
+import org.apache.spark.internal.Logging
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{StructField, _}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
-class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: ApplyLogisticRegression){
+import scala.reflect.io.File
 
-  def run(): Unit = {
+class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: ApplyLogisticRegression)
+extends Logging{
+
+  def run(args: Array[String]): Unit = {
+    log.info("Starting Titanic Application")
 
     val sqlContext = sparkSession.sqlContext
 
     val rawDataReader: RawDataReader = RawDataReader(sparkSession)
 
-    val csvDF = rawDataReader.data()
+    val csvDF = rawDataReader.data(resolvePath(args))
 
     val csvRdd: RDD[Row] = transformCabin(csvDF)
 
@@ -32,7 +40,7 @@ class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: Ap
 
     val accuracy = evaluator.evaluate(predictions)
 
-    println("Accuracy: " + accuracy)
+    log.info("Accuracy: " + accuracy)
 
     predictions.show()
   }
@@ -61,6 +69,25 @@ class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: Ap
       StructField("CharRest", StringType, true),
       StructField("Cabins", IntegerType, true)
     ))
+  }
+
+  private def resolvePath(args: Array[String]): String = {
+    log.info("Getting the path for the .csv data file")
+    args.headOption match {
+      case None =>
+        this.getClass.getResource("/titanic.csv") match {
+          case null => throw new Exception("File not found: resources/titanic.csv and no path privided as arguments")
+          case resource => resource.getPath
+        }
+      case path: Some[String] => {
+        val file: File = new File(new io.File(path.get))
+        if (file.exists) {
+          path.get
+        } else {
+          throw new Exception(s"File ${path.get} does not exist")
+        }
+      }
+    }
   }
 }
 

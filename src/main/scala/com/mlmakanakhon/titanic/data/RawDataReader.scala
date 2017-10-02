@@ -2,22 +2,20 @@ package com.mlmakanakhon.titanic.data
 
 import java.io.InputStream
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-class RawDataReader(sparkSession: SparkSession) {
-  def data(): DataFrame = {
-    this.getClass.getResource("/titanic.csv") match {
-      case null => throw new Exception("File not found: resources/titanic.csv")
-      case resource => {
-        sparkSession.read
-          .format("csv")
-          .option("header", "true")
-          .schema(customSchema())
-          .load(resource.getPath)
-      }
-    }
+class RawDataReader(sparkSession: SparkSession) extends Logging{
+  def data(path: String): DataFrame = {
+    log.info(s"Loading the data file from the path: $path")
+    sparkSession.read
+      .format("csv")
+      .option("header", "true")
+      .schema(customSchema())
+      .load(path)
   }
+
   def customSchema(): StructType = {
     StructType(Array(
       StructField("PassengerId", LongType, true),
@@ -37,6 +35,6 @@ class RawDataReader(sparkSession: SparkSession) {
 }
 
 
-object RawDataReader{
+object RawDataReader {
   def apply(sparkSession: SparkSession): RawDataReader = new RawDataReader(sparkSession)
 }

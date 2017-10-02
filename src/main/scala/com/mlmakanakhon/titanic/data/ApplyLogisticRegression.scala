@@ -1,11 +1,12 @@
 package com.mlmakanakhon.titanic.data
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.ml.classification.LogisticRegression
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.sql.functions.{round, sqrt, when}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-class ApplyLogisticRegression(sparkSession: SparkSession){
+class ApplyLogisticRegression(sparkSession: SparkSession) extends Logging{
 
   lazy val logisticRegression =  new LogisticRegression()
     .setMaxIter(10)
@@ -23,6 +24,7 @@ class ApplyLogisticRegression(sparkSession: SparkSession){
       "Gender=male","Gender=female","Embarked=C","Embarked=S","Embarked=Q")
 
     val assembler = new VectorAssembler().setInputCols(featuresCols).setOutputCol("features")
+    log.info("Applying features.")
 
     val dataWithFeatures = assembler.transform(withFeatures)
 
@@ -39,7 +41,7 @@ class ApplyLogisticRegression(sparkSession: SparkSession){
     val lrModel = logisticRegression.fit(trainData)
     // Print the coefficients and intercept for logistic regression
 
-    println(xs"Coefficients: ${lrModel.coefficients} Intercept: ${lrModel.intercept}")
+    log.info(s"Coefficients: ${lrModel.coefficients} Intercept: ${lrModel.intercept}")
 
     lrModel.transform(testData)
   }
