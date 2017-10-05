@@ -4,6 +4,7 @@ import java.io
 import java.net.URL
 
 import com.mlmakanakhon.titanic.data.{ApplyLogisticRegression, RawDataReader}
+import com.mlmakanakhon.titanic.evaluator.EvaluateResults
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
 import org.apache.spark.rdd.RDD
@@ -43,6 +44,11 @@ extends Logging{
     log.info("Accuracy: " + accuracy)
 
     predictions.show()
+
+    val evaluateResults = EvaluateResults(sparkSession)
+    val evaluation = evaluateResults.run(predictions)
+
+    println(evaluation)
   }
 
   private def transformCabin(csvDF: DataFrame) = {
