@@ -3,7 +3,7 @@ package com.mlmakanakhon.titanic
 import java.io
 import java.net.URL
 
-import com.mlmakanakhon.titanic.data.{ApplyLogisticRegression, RawDataReader}
+import com.mlmakanakhon.titanic.data.{ApplyLinearSupportVectorMachine, ApplyLogisticRegression, PredictionModel, RawDataReader}
 import com.mlmakanakhon.titanic.evaluator.EvaluateResults
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.evaluation.BinaryClassificationEvaluator
@@ -13,7 +13,7 @@ import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 import scala.reflect.io.File
 
-class TitanicApplication(sparkSession: SparkSession, applyLogisticRegression: ApplyLogisticRegression)
+class TitanicApplication(sparkSession: SparkSession, predictionModel: PredictionModel)
 extends Logging{
 
   def run(args: Array[String]): Unit = {
@@ -32,7 +32,7 @@ extends Logging{
 
     cabinDF.show()
     val withCabinsDF: DataFrame = csvDF.join(cabinDF, Seq("PassengerId"))
-    val predictions = applyLogisticRegression.prediction(withCabinsDF)
+    val predictions = predictionModel.prediction(withCabinsDF)
 
     // create an Evaluator for binary classification, which expects two input columns: rawPrediction and label.**
     val evaluator = new BinaryClassificationEvaluator().setLabelCol("label")
@@ -101,7 +101,7 @@ object TitanicApplication {
   def apply(sparkSession: SparkSession): TitanicApplication = {
     new TitanicApplication(
       sparkSession,
-      ApplyLogisticRegression(sparkSession)
+      ApplyLinearSupportVectorMachine(sparkSession)
     )
   }
 }
